@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>SnapMark - 画像編集ツール</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', '"Noto Sans JP"', 'sans-serif'] },
+                    colors: { brand: { 50: '#f0fdfa', 100: '#ccfbf1', 500: '#14b8a6', 600: '#0d9488', 700: '#0f766e', 900: '#134e4a' } },
+                    boxShadow: { 
+                        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+                        'float': '0 10px 40px -10px rgba(0,0,0,0.1)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; touch-action: none; background-color: #f1f5f9; color: #0f172a; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* ツールボタン */
+        .tool-btn { position: relative; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 12px; }
+        .tool-btn.active { background-color: #0f172a; color: white; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); transform: translateY(-1px); }
+        .tool-btn:hover:not(.active) { background-color: #e2e8f0; transform: translateY(-1px); }
+
+        /* ドラムロール */
+        .drum-container { position: relative; height: 120px; overflow: hidden; background: #f8fafc; border-radius: 16px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); touch-action: pan-y; }
+        .drum-mask { position: absolute; inset: 0; pointer-events: none; z-index: 10; background: linear-gradient(to bottom, #ffffff 0%, transparent 40%, transparent 60%, #ffffff 100%); }
+        .drum-scroll { height: 100%; overflow-y: auto; scroll-snap-type: y mandatory; padding-top: 40px; padding-bottom: 40px; scrollbar-width: none; width: 100%; overflow-x: hidden; }
+        .drum-item { height: 40px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 500; color: #94a3b8; scroll-snap-align: center; transition: all 0.2s ease; cursor: pointer; width: 100%; }
+        .drum-item.active { color: #0f172a; font-size: 24px; font-weight: 700; transform: scale(1.1); }
+        .drum-highlight { position: absolute; top: 50%; left: 16px; right: 16px; height: 40px; transform: translateY(-50%); border-radius: 8px; background-color: rgba(15, 23, 42, 0.03); pointer-events: none; z-index: 0; }
+
+        /* カスタムスライダー */
+        input[type=range] { -webkit-appearance: none; background: transparent; cursor: pointer; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #ffffff; border: 2px solid #0f172a; margin-top: -8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; border-radius: 2px; background: linear-gradient(to right, #cbd5e1 0%, #cbd5e1 100%); }
+
+        /* ピッカーパネル */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.15);
+            padding-bottom: max(24px, env(safe-area-inset-bottom));
+        }
+        
+        /* カラーピッカー */
+        .color-dot { width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.1s; }
+        .color-dot:hover { transform: scale(1.1); }
+        .color-dot.active { box-shadow: 0 0 0 2px white, 0 0 0 4px #0f172a; }
+        .color-input-wrapper { position: relative; width: 100%; height: 36px; border-radius: 8px; overflow: hidden; cursor: pointer; border: 1px solid #e2e8f0; }
+        input[type="color"] { position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; padding: 0; margin: 0; border: none; cursor: pointer; }
+
+        /* トースト */
+        #toast {
+            position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-150%);
+            opacity: 0; visibility: hidden; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 100; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.2);
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
+        
+        .tool-separator { width: 1px; height: 24px; background-color: #e2e8f0; margin: 0 4px; }
+        @media (max-width: 768px) { .tool-separator { width: 24px; height: 1px; margin: 4px 0; } }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden bg-[#F3F4F6]">
+
+    <!-- ヘッダー -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200/60 z-30 shrink-0 h-16 sticky top-0">
+        <div class="max-w-[1600px] mx-auto px-4 h-full flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-900 text-white p-2 rounded-xl shadow-lg shadow-slate-900/10"><i data-lucide="pen-tool" class="w-5 h-5"></i></div>
+                <div class="hidden sm:block"><h1 class="text-lg font-bold tracking-tight text-slate-800">SnapMark</h1></div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-3">
+                <button onclick="document.getElementById('fileInput').click()" class="hidden md:flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+                    <i data-lucide="image-plus" class="w-4 h-4"></i> 開く
+                </button>
+                <input type="file" id="fileInput" class="hidden" accept="image/*">
+                <button onclick="document.getElementById('fileInput').click()" class="md:hidden p-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors"><i data-lucide="image-plus" class="w-6 h-6"></i></button>
+                <div class="h-6 w-px bg-slate-200 mx-1 hidden md:block"></div>
+                <button onclick="saveImage()" class="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white text-sm font-semibold rounded-full hover:bg-slate-800 shadow-lg shadow-slate-900/20 transition-all active:scale-95">
+                    <i data-lucide="download" class="w-4 h-4"></i> <span>保存</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 flex-col-reverse md:flex-row overflow-hidden relative">
+        
+        <!-- スリムサイドバー -->
+        <aside class="w-full md:w-[80px] bg-white border-t md:border-t-0 md:border-r border-slate-200/60 flex flex-row md:flex-col z-20 shadow-sm shrink-0 items-center justify-between md:justify-start py-2 md:py-6 px-4 md:px-0 gap-1 md:gap-3 overflow-x-auto no-scrollbar pb-[max(8px,env(safe-area-inset-bottom))]">
+            
+            <!-- メインツール -->
+            <div class="flex md:flex-col gap-2 md:gap-3 items-center">
+                <button onclick="setMode('select')" id="btn-select" class="tool-btn active w-10 h-10 md:w-11 md:h-11 flex items-center justify-center" title="選択 (V)"><i data-lucide="mouse-pointer-2" class="w-5 h-5"></i></button>
+                
+                <button onclick="setMode('rect')" id="btn-rect" class="tool-btn w-10 h-10 md:w-11 md:h-11 flex items-center justify-center text-slate-500" title="枠線 (R)"><i data-lucide="square" class="w-5 h-5"></i></button>
+                <button onclick="setMode('arrow')" id="btn-arrow" class="tool-btn w-10 h-10 md:w-11 md:h-11 flex items-center justify-center text-slate-500" title="矢印 (A)"><i data-lucide="arrow-up-right" class="w-5 h-5"></i></button>
+                <button onclick="setMode('text')" id="btn-text" class="tool-btn w-10 h-10 md:w-11 md:h-11 flex items-center justify-center text-slate-500" title="文字 (T)"><i data-lucide="type" class="w-5 h-5"></i></button>
+                
+                <!-- 太さ設定 -->
+                <button onclick="toggleSizePicker()" id="btn-size" class="tool-btn w-10 h-10 md:w-11 md:h-11 flex flex-col items-center justify-center gap-0.5 text-slate-500" title="サイズ設定">
+                    <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                    <span id="current-size-badge" class="text-[9px] font-bold">4</span>
+                </button>
+
+                <!-- 色設定 -->
+                <button onclick="toggleColorPicker()" id="btn-color" class="tool-btn w-10 h-10 md:w-11 md:h-11 flex items-center justify-center relative hover:bg-slate-50" title="色設定">
+                    <div id="current-color-indicator" class="w-5 h-5 rounded-full border border-black/10 shadow-sm" style="background-color: #ef4444;"></div>
+                </button>
+            </div>
+
+            <div class="tool-separator hidden md:block"></div>
+
+            <!-- マスク & 削除 -->
+            <div class="flex md:flex-col gap-2 md:gap-3 items-center">
+                <button onclick="setMode('mask-black')" id="btn-mask-black" class="tool-btn w-10 h-10 md:w-11 md:h-11 flex items-center justify-center text-slate-500" title="塗りつぶし"><div class="w-5 h-5 bg-slate-800 rounded"></div></button>
+                <button onclick="setMode('mask-mosaic')" id="btn-mask-mosaic" class="tool-btn w-10 h-10 md:w-11 md:h-11 flex items-center justify-center text-slate-500" title="モザイク"><i data-lucide="grip" class="w-5 h-5"></i></button>
+                
+                <div class="tool-separator"></div>
+
+                <button onclick="deleteObject()" class="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-600 transition-colors" title="削除 (Del)"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                <button onclick="resetCanvas()" class="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 transition-colors" title="全消去"><i data-lucide="rotate-ccw" class="w-5 h-5"></i></button>
+            </div>
+        </aside>
+
+        <!-- メインキャンバス -->
+        <main class="flex-1 bg-[#F3F4F6] relative flex flex-col overflow-hidden">
+            <div class="absolute inset-0 z-0 opacity-[0.4]" style="background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px); background-size: 24px 24px;"></div>
+            <div class="flex-1 overflow-auto custom-scrollbar relative z-10 flex flex-col" id="dropZone">
+                <div class="flex-grow flex items-center justify-center min-w-min min-h-min p-8 md:p-16">
+                    <div id="emptyState" class="w-full max-w-md bg-white/60 backdrop-blur-sm border-2 border-dashed border-slate-300 rounded-3xl p-12 text-center hover:bg-white/80 hover:border-slate-400 hover:shadow-xl hover:shadow-slate-200/50 transition-all cursor-pointer group" onclick="document.getElementById('fileInput').click()">
+                        <div class="w-20 h-20 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300"><i data-lucide="image-plus" class="w-10 h-10 text-slate-400 group-hover:text-slate-600"></i></div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-2">画像をアップロード</h3>
+                        <p class="text-sm text-slate-500 mb-6">ドラッグ＆ドロップ または クリック</p>
+                        <div class="flex justify-center gap-2 opacity-50 grayscale group-hover:grayscale-0 transition-all duration-500">
+                            <span class="px-2 py-1 bg-white rounded border border-slate-200 text-[10px] font-bold text-slate-600">PNG</span>
+                            <span class="px-2 py-1 bg-white rounded border border-slate-200 text-[10px] font-bold text-slate-600">JPG</span>
+                        </div>
+                    </div>
+                    <div id="canvasWrapper" class="hidden relative shadow-2xl shadow-slate-300/50 rounded-lg overflow-hidden bg-white ring-1 ring-black/5"><canvas id="c"></canvas></div>
+                </div>
+            </div>
+
+            <div id="zoomControls" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 items-center gap-1 bg-white/90 backdrop-blur shadow-float p-1.5 rounded-full border border-white/50 z-30 transition-all pb-[env(safe-area-inset-bottom)]">
+                <button onclick="zoomOut()" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-colors"><i data-lucide="minus" class="w-4 h-4"></i></button>
+                <span id="zoomLevel" class="text-xs font-bold text-slate-800 w-12 text-center select-none tabular-nums">100%</span>
+                <button onclick="zoomIn()" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-colors"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                <div class="w-px h-4 bg-slate-200 mx-1"></div>
+                <button onclick="fitToScreen()" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition-colors">Fit</button>
+            </div>
+
+            <!-- サイズ設定パネル -->
+            <div id="sizePickerPanel" class="hidden absolute glass-panel z-40 w-full md:w-64 md:rounded-3xl p-5 left-0 bottom-0 md:left-[88px] md:bottom-auto md:top-20 origin-bottom-left">
+                <div class="w-12 h-1.5 bg-slate-200/80 rounded-full mx-auto mb-4 md:hidden"></div>
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2" id="size-label">Line Width</div>
+                <div class="drum-container mb-4">
+                    <div class="drum-mask"></div><div class="drum-highlight"></div>
+                    <div class="drum-scroll no-scrollbar" id="drum-scroller"></div>
+                </div>
+                <div class="mb-4 px-1"><input type="range" min="1" max="100" value="4" id="sheet-slider" oninput="setSize(this.value)" class="w-full"></div>
+                <div class="flex items-center justify-between pt-3 border-t border-slate-100" id="rounded-option">
+                    <span class="text-sm font-medium text-slate-600">角丸</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="rounded-toggle" class="sr-only peer" checked onchange="setRounded(this.checked)">
+                        <div class="w-10 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900 transition-colors"></div>
+                    </label>
+                </div>
+                <button onclick="closeAllModals()" class="mt-4 w-full py-3 bg-slate-900 text-white rounded-xl text-sm font-bold md:hidden shadow-lg shadow-slate-900/10">完了</button>
+            </div>
+
+            <!-- 色設定パネル -->
+            <div id="colorPickerPanel" class="hidden absolute glass-panel z-40 w-full md:w-64 md:rounded-3xl p-5 left-0 bottom-0 md:left-[88px] md:bottom-auto md:top-60 origin-bottom-left">
+                <div class="w-12 h-1.5 bg-slate-200/80 rounded-full mx-auto mb-4 md:hidden"></div>
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Color</div>
+                <div class="grid grid-cols-5 gap-3 mb-4 place-items-center">
+                    <button onclick="setColor('#ef4444')" class="w-9 h-9 rounded-full bg-red-500 hover:scale-110 transition-transform color-dot active shadow-sm"></button>
+                    <button onclick="setColor('#3b82f6')" class="w-9 h-9 rounded-full bg-blue-500 hover:scale-110 transition-transform color-dot shadow-sm"></button>
+                    <button onclick="setColor('#10b981')" class="w-9 h-9 rounded-full bg-emerald-500 hover:scale-110 transition-transform color-dot shadow-sm"></button>
+                    <button onclick="setColor('#f59e0b')" class="w-9 h-9 rounded-full bg-amber-500 hover:scale-110 transition-transform color-dot shadow-sm"></button>
+                    <button onclick="setColor('#1e293b')" class="w-9 h-9 rounded-full bg-slate-800 hover:scale-110 transition-transform color-dot shadow-sm"></button>
+                    <button onclick="setColor('#ffffff')" class="w-9 h-9 rounded-full bg-white border border-slate-200 hover:scale-110 transition-transform color-dot shadow-sm"></button>
+                    <button onclick="setColor('#ec4899')" class="w-9 h-9 rounded-full bg-pink-500 hover:scale-110 transition-transform color-dot shadow-sm"></button>
+                    <button onclick="activateEyeDropper()" class="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shadow-sm" title="スポイト"><i data-lucide="pipette" class="w-5 h-5"></i></button>
+                </div>
+                <div class="color-input-wrapper mb-2">
+                    <input type="color" id="native-color-picker" oninput="setColor(this.value)">
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none text-xs font-bold text-slate-500 bg-slate-50/50 backdrop-blur-sm">Custom Color</div>
+                </div>
+                <button onclick="closeAllModals()" class="mt-4 w-full py-3 bg-slate-900 text-white rounded-xl text-sm font-bold md:hidden shadow-lg shadow-slate-900/10">完了</button>
+            </div>
+
+            <div id="modalOverlay" onclick="closeAllModals()" class="hidden absolute inset-0 bg-slate-900/20 backdrop-blur-[2px] z-30 transition-opacity"></div>
+        </main>
+    </div>
+
+    <!-- トースト -->
+    <div id="toast" class="bg-white/90 backdrop-blur pl-4 pr-6 py-3 rounded-full shadow-float flex items-center gap-3 border border-white/50">
+        <div id="toast-icon-bg" class="bg-emerald-100 text-emerald-600 p-1 rounded-full"><i data-lucide="check" class="w-4 h-4 stroke-[3]"></i></div>
+        <span id="toastMsg" class="text-sm font-bold text-slate-800">保存しました</span>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const canvas = new fabric.Canvas('c', { selection: true, preserveObjectStacking: true, backgroundColor: '#ffffff', uniformScaling: false });
+        fabric.Object.prototype.set({ transparentCorners: false, cornerColor: '#ffffff', cornerStrokeColor: '#0f172a', borderColor: '#0f172a', cornerSize: 12, padding: 8, cornerStyle: 'circle', borderDashArray: [4, 4], borderOpacityWhenMoving: 0.5, uniformScaling: false });
+        
+        let STATE = { color: '#ef4444', width: 4, fontSize: 32, mosaicSize: 8, rounded: true, maskColor: '#1e293b', mode: 'select', img: null, zoom: 1.0, scaleFactor: 1.0 };
+        
+        const drumScroller = document.getElementById('drum-scroller');
+        const SIZE_OPTIONS = [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 160];
+        SIZE_OPTIONS.forEach(w => {
+            const div = document.createElement('div'); div.className = 'drum-item'; div.textContent = w; div.dataset.value = w;
+            div.onclick = () => { div.scrollIntoView({behavior: 'smooth', block: 'center'}); setSize(w); };
+            drumScroller.appendChild(div);
+        });
+        
+        let drumTimeout;
+        drumScroller.addEventListener('scroll', () => {
+            clearTimeout(drumTimeout);
+            drumTimeout = setTimeout(() => {
+                const cRect = drumScroller.getBoundingClientRect(); const cy = cRect.top + cRect.height/2;
+                let closest = null, minDiff = Infinity;
+                document.querySelectorAll('.drum-item').forEach(item => {
+                    const rect = item.getBoundingClientRect();
+                    const diff = Math.abs(cy - (rect.top + rect.height/2));
+                    item.classList.remove('active');
+                    if(diff < minDiff) { minDiff = diff; closest = item; }
+                });
+                if(closest) { closest.classList.add('active'); setSize(closest.dataset.value); }
+            }, 50);
+        });
+
+        function toggleSizePicker() { togglePanel('sizePickerPanel'); updatePanelContent(); }
+        function toggleColorPicker() { togglePanel('colorPickerPanel'); }
+        function togglePanel(id) {
+            const el = document.getElementById(id); const overlay = document.getElementById('modalOverlay');
+            const isOpen = !el.classList.contains('hidden');
+            closeAllModals();
+            if(!isOpen) { el.classList.remove('hidden'); el.classList.add('panel-enter'); overlay.classList.remove('hidden'); }
+        }
+        function closeAllModals() {
+            ['sizePickerPanel', 'colorPickerPanel'].forEach(pid => document.getElementById(pid).classList.add('hidden'));
+            document.getElementById('modalOverlay').classList.add('hidden');
+        }
+
+        function updatePanelContent() {
+            const obj = canvas.getActiveObject();
+            const isText = STATE.mode === 'text' || (obj && obj.type === 'i-text');
+            const isMosaic = STATE.mode === 'mask-mosaic' || (obj && obj.isMosaic);
+            let label = 'Line Width'; if(isText) label = 'Text Size'; if(isMosaic) label = 'Mosaic Size';
+            document.getElementById('size-label').textContent = label;
+            document.getElementById('rounded-option').style.display = (isText||isMosaic) ? 'none' : 'flex';
+            let val = STATE.width; if(isText) val = STATE.fontSize; if(isMosaic) val = STATE.mosaicSize;
+            setTimeout(() => {
+                const items = Array.from(document.querySelectorAll('.drum-item'));
+                const target = items.reduce((p, c) => Math.abs(c.dataset.value - val) < Math.abs(p.dataset.value - val) ? c : p);
+                if(target) target.scrollIntoView({block: 'center'});
+            }, 50);
+        }
+
+        function setMode(m) {
+            STATE.mode = m; document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.getElementById(`btn-${m}`); if(btn) btn.classList.add('active');
+            canvas.isDrawingMode = false; canvas.selection = (m === 'select'); canvas.defaultCursor = m === 'select' ? 'default' : 'crosshair';
+            canvas.getObjects().forEach(o => { o.selectable = (m === 'select'); o.evented = (m === 'select'); });
+            canvas.requestRenderAll();
+        }
+
+        function setColor(val) {
+            STATE.color = val; STATE.maskColor = val;
+            document.getElementById('current-color-indicator').style.backgroundColor = val;
+            document.getElementById('native-color-picker').value = val;
+            document.querySelectorAll('.color-dot').forEach(el => el.classList.remove('active'));
+            const obj = canvas.getActiveObject();
+            if(obj) {
+                if(obj.type==='i-text'||obj.type==='text') obj.set({fill: val});
+                else if(obj.fill && obj.fill!=='transparent') obj.set({fill: val});
+                else obj.set({stroke: val});
+                canvas.requestRenderAll();
+            }
+        }
+        function setSize(val) {
+            const v = parseInt(val); const obj = canvas.getActiveObject();
+            const isText = STATE.mode === 'text' || (obj && obj.type === 'i-text');
+            const isMosaic = STATE.mode === 'mask-mosaic' || (obj && obj.isMosaic);
+            document.getElementById('current-size-badge').textContent = v;
+            document.getElementById('sheet-slider').value = v;
+            if(isText) { STATE.fontSize = v; if(obj && obj.type==='i-text') { obj.set({fontSize: v * STATE.scaleFactor}); canvas.requestRenderAll(); } }
+            else if(isMosaic) { STATE.mosaicSize = v; if(obj && obj.isMosaic) updateMosaic(obj); }
+            else { STATE.width = v; if(obj && obj.stroke) { obj.set({strokeWidth: v * STATE.scaleFactor}); canvas.requestRenderAll(); } }
+        }
+        function setRounded(v) {
+            STATE.rounded = v; const obj = canvas.getActiveObject();
+            if(obj && obj.type==='rect' && obj.fill==='transparent') { const r = v ? 5 * STATE.scaleFactor : 0; obj.set({rx:r, ry:r}); canvas.requestRenderAll(); }
+        }
+
+        canvas.on('selection:created', syncState); canvas.on('selection:updated', syncState);
+        function syncState(e) {
+            const obj = e.selected[0]; if(!obj) return;
+            const col = obj.stroke || obj.fill; if(col && col!=='transparent' && col.startsWith('#')) setColor(col);
+            let val = STATE.width;
+            if(obj.type === 'i-text') val = Math.round(obj.fontSize / STATE.scaleFactor);
+            else if(obj.isMosaic && obj.filters && obj.filters[0]) val = Math.round(obj.filters[0].blocksize / STATE.scaleFactor);
+            else if(obj.strokeWidth) val = Math.round(obj.strokeWidth / STATE.scaleFactor);
+            setSize(val); if(!document.getElementById('sizePickerPanel').classList.contains('hidden')) updatePanelContent();
+        }
+
+        canvas.on('mouse:down', opt => {
+            if(STATE.mode === 'select') return;
+            const p = canvas.getPointer(opt.e);
+            const sf = STATE.scaleFactor;
+            const sw = STATE.width * sf;
+            const sr = STATE.rounded ? 5 * sf : 0;
+            const size = 100 * sf;
+            
+            if(STATE.mode === 'rect') addToCanvas(new fabric.Rect({ left: p.x, top: p.y, width: size, height: size*0.6, fill: 'transparent', stroke: STATE.color, strokeWidth: sw, rx: sr, ry: sr, strokeUniform: true }));
+            else if(STATE.mode === 'arrow') { const hs = 10*sf + sw*0.5; addToCanvas(new fabric.Path(`M 0 0 L ${size} 0 M ${size-hs} -${hs} L ${size} 0 L ${size-hs} ${hs}`, { left: p.x, top: p.y, fill: 'transparent', stroke: STATE.color, strokeWidth: sw, strokeLineCap: 'round', strokeLineJoin: 'round' })); }
+            else if(STATE.mode === 'text') { 
+                const t = new fabric.IText('', { // 空文字で初期化
+                    left: p.x, top: p.y, fontFamily: 'Noto Sans JP', fontSize: STATE.fontSize*sf, fill: STATE.color, fontWeight: 'bold' 
+                }); 
+                t.set({uniformScaling: true}); 
+                addToCanvas(t); 
+                t.bringToFront(); // 最前面へ
+                t.enterEditing(); // 編集モード開始
+                if(t.hiddenTextarea) t.hiddenTextarea.focus(); // スマホ対策
+            }
+            else if(STATE.mode === 'mask-black') addToCanvas(new fabric.Rect({ left: p.x, top: p.y, width: size, height: size*0.4, fill: STATE.maskColor, rx: 0, ry: 0 }));
+            else if(STATE.mode === 'mask-mosaic') addMosaic(p.x, p.y);
+            setMode('select');
+        });
+
+        function addToCanvas(obj) {
+            if(obj.type!=='i-text') obj.setControlsVisibility({mt:true, mb:true, ml:true, mr:true, bl:true, br:true, tl:true, tr:true, mtr:true});
+            else obj.setControlsVisibility({mt:false, mb:false, ml:false, mr:false, bl:true, br:true, tl:true, tr:true, mtr:true});
+            canvas.add(obj); 
+            canvas.setActiveObject(obj);
+            
+            // 図形追加時に、既存のテキストが隠れないように全テキストを最前面へ持ってくる
+            // これにより「枠線を置いたら文字が隠れた」を防ぐ
+            if(obj.type !== 'i-text') {
+                canvas.getObjects().forEach(o => {
+                    if(o.type === 'i-text') o.bringToFront();
+                });
+            }
+        }
+
+        function addMosaic(x, y) {
+            if(!STATE.img) return;
+            const w = 120 * STATE.scaleFactor; const h = 60 * STATE.scaleFactor;
+            fabric.Image.fromURL(cropOriginalImage(x, y, w, h), img => {
+                img.set({left: x, top: y, width: w, height: h, isMosaic: true});
+                img.filters.push(new fabric.Image.filters.Pixelate({blocksize: STATE.mosaicSize * STATE.scaleFactor}));
+                img.applyFilters(); addToCanvas(img);
+            });
+        }
+        canvas.on('object:modified', e => { if(e.target && e.target.isMosaic) updateMosaic(e.target); });
+        function cropOriginalImage(l, t, w, h) {
+            const c = document.createElement('canvas'); c.width = w; c.height = h;
+            c.getContext('2d').drawImage(STATE.img.getElement(), l, t, w, h, 0, 0, w, h);
+            return c.toDataURL();
+        }
+        function updateMosaic(obj) {
+            const newImg = new Image();
+            newImg.onload = () => {
+                obj.setElement(newImg); obj.filters = [new fabric.Image.filters.Pixelate({blocksize: STATE.mosaicSize * STATE.scaleFactor})];
+                obj.applyFilters(); obj.set({scaleX: 1, scaleY: 1}); canvas.requestRenderAll();
+            };
+            newImg.src = cropOriginalImage(obj.left, obj.top, obj.width * obj.scaleX, obj.height * obj.scaleY);
+        }
+
+        function deleteObject() {
+            const actives = canvas.getActiveObjects();
+            if(actives.length) { actives.forEach(o => canvas.remove(o)); canvas.discardActiveObject(); }
+            else showToast('削除する要素がありません', true);
+        }
+        document.addEventListener('keydown', e => {
+            if((e.key==='Delete'||e.key==='Backspace') && canvas.getActiveObject() && !canvas.getActiveObject().isEditing) deleteObject();
+            if(e.ctrlKey || e.metaKey) {
+                if(e.key==='='||e.key==='+') { e.preventDefault(); zoomIn(); }
+                if(e.key==='-') { e.preventDefault(); zoomOut(); }
+                if(e.key==='0') { e.preventDefault(); fitToScreen(); }
+            }
+        });
+        document.getElementById('dropZone').addEventListener('wheel', e => {
+            if(e.ctrlKey || e.metaKey) { e.preventDefault(); let z = STATE.zoom * (0.999 ** e.deltaY); if(z>5)z=5; if(z<0.1)z=0.1; setZoom(z); }
+        }, {passive:false});
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+        const dz = document.getElementById('dropZone');
+        dz.addEventListener('dragover', e => { e.preventDefault(); document.getElementById('emptyState').classList.add('border-brand-400'); });
+        dz.addEventListener('dragleave', e => { e.preventDefault(); document.getElementById('emptyState').classList.remove('border-brand-400'); });
+        dz.addEventListener('drop', e => { e.preventDefault(); if(e.dataTransfer.files[0]) handleFile({target:{files:[e.dataTransfer.files[0]]}}); });
+        document.addEventListener('paste', e => {
+            const items = e.clipboardData.items;
+            for(let i=0; i<items.length; i++) if(items[i].type.indexOf('image')!==-1) loadBlob(items[i].getAsFile());
+        });
+
+        function handleFile(e) {
+            const f = e.target.files[0]; if(!f) return;
+            if(f.type.startsWith('image/')) loadBlob(f); else showToast('画像のみ対応しています', true);
+            e.target.value = '';
+        }
+        function loadBlob(blob) {
+            const r = new FileReader();
+            r.onload = f => { const i = new Image(); i.src = f.target.result; i.onload = () => initEditor(i); };
+            r.readAsDataURL(blob);
+        }
+        function initEditor(imgTag) {
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('canvasWrapper').classList.remove('hidden');
+            document.getElementById('zoomControls').classList.remove('hidden');
+            document.getElementById('zoomControls').classList.add('flex');
+            STATE.img = new fabric.Image(imgTag, { selectable: false, evented: false });
+            const maxDim = Math.max(imgTag.width, imgTag.height);
+            STATE.scaleFactor = Math.max(1, maxDim / 1200); 
+            setSize(6);
+            canvas.setDimensions({ width: imgTag.width, height: imgTag.height });
+            canvas.setBackgroundImage(STATE.img, canvas.renderAll.bind(canvas));
+            fitToScreen(); setMode('select');
+        }
+        function fitToScreen() {
+            if(!STATE.img) return;
+            const c = document.getElementById('dropZone');
+            const vw = c.clientWidth - 80; const vh = c.clientHeight - 80;
+            if(vw<=0 || vh<=0) return;
+            setZoom(Math.min(1, Math.min(vw/STATE.img.width, vh/STATE.img.height)));
+        }
+        function setZoom(z) {
+            STATE.zoom = z; canvas.setZoom(z);
+            canvas.setDimensions({ width: STATE.img.width * z, height: STATE.img.height * z });
+            document.getElementById('zoomLevel').textContent = Math.round(z*100) + '%';
+        }
+        function zoomIn() { let z = STATE.zoom * 1.2; if(z>5)z=5; setZoom(z); }
+        function zoomOut() { let z = STATE.zoom / 1.2; if(z<0.1)z=0.1; setZoom(z); }
+
+        function saveImage() {
+            if(!STATE.img) return;
+            const z = STATE.zoom; setZoom(1); 
+            canvas.discardActiveObject(); canvas.renderAll();
+            canvas.getElement().toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const l = document.createElement('a'); l.download = `snapmark-${Date.now()}.png`; l.href = url;
+                document.body.appendChild(l); l.click(); document.body.removeChild(l);
+                showToast('保存しました');
+                URL.revokeObjectURL(url);
+                setZoom(z);
+            }, 'image/png', 1.0);
+        }
+        
+        function resetCanvas() { if(confirm('全消去しますか？')) canvas.getObjects().forEach(o => canvas.remove(o)); }
+
+        let toastTimeout;
+        function showToast(msg, isError = false) {
+            const t = document.getElementById('toast');
+            const iconBg = document.getElementById('toast-icon-bg');
+            document.getElementById('toastMsg').textContent = msg;
+            const icon = t.querySelector('i');
+            
+            t.className = "fixed top-24 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur pl-4 pr-6 py-3 rounded-full shadow-float flex items-center gap-3 z-50 border transition-all duration-300";
+            
+            if(isError) {
+                icon.setAttribute('data-lucide', 'alert-circle'); icon.className = "w-4 h-4 stroke-[3] text-rose-500";
+                iconBg.className = 'bg-rose-100 p-1 rounded-full'; t.classList.add('border-rose-200');
+            } else {
+                icon.setAttribute('data-lucide', 'check'); icon.className = "w-4 h-4 stroke-[3] text-emerald-600";
+                iconBg.className = 'bg-emerald-100 p-1 rounded-full'; t.classList.add('border-white/50');
+            }
+            lucide.createIcons();
+
+            t.classList.remove('toast-hidden'); t.classList.add('show');
+
+            if(toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                t.classList.remove('show'); t.classList.add('toast-hidden');
+            }, 3000);
+        }
+        async function activateEyeDropper() {
+            if (!window.EyeDropper) { showToast('スポイト未対応', true); return; }
+            try { const r = await new EyeDropper().open(); setColor(r.sRGBHex); } catch(e){}
+        }
+    </script>
+</body>
+</html>
