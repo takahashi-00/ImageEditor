@@ -20,7 +20,7 @@
                     },
                     boxShadow: { 
                         'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
-                        'float': '0 20px 40px -10px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.05)',
+                        'float': '0 10px 40px -10px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.05)',
                         'glow': '0 0 20px rgba(99, 102, 241, 0.2)'
                     },
                     animation: {
@@ -44,82 +44,40 @@
         }
     </script>
     <style>
+        /* 100dvhでモバイルブラウザのアドレスバー変動に対応 */
         body { font-family: 'Inter', 'Noto Sans JP', sans-serif; touch-action: none; background-color: #f8fafc; color: #0f172a; height: 100dvh; overflow: hidden; }
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         /* ツールボタン */
-        .tool-btn { 
-            position: relative; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 16px; 
-            background: transparent;
-        }
-        .tool-btn:hover { background-color: rgba(241, 245, 249, 0.8); transform: translateY(-1px); }
-        .tool-btn.active { 
-            background-color: #f1f5f9; color: #4f46e5; 
-            box-shadow: inset 0 0 0 1px #e0e7ff, 0 2px 4px rgba(0,0,0,0.02);
-            transform: translateY(0);
-        }
-        
-        /* LP背景 */
-        .lp-bg {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        }
-        .mesh-gradient {
-            position: absolute; width: 100%; height: 100%; top: 0; left: 0; overflow: hidden; pointer-events: none; z-index: 0;
-        }
-        .mesh-blob {
-            position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.6;
-        }
+        .tool-btn { position: relative; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 12px; }
+        .tool-btn.active { background-color: #0f172a; color: white; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); transform: translateY(-1px); }
+        .tool-btn:hover:not(.active) { background-color: #e2e8f0; transform: translateY(-1px); }
 
-        /* ステップカード */
-        .step-card {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            border-radius: 24px; padding: 28px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
-            transition: all 0.3s ease;
-        }
-        .step-card:hover {
-            transform: translateY(-4px);
-            background: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
-            border-color: #fff;
-        }
-        .step-icon-wrapper {
-            width: 48px; height: 48px; border-radius: 16px;
-            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-            display: flex; align-items: center; justify-content: center;
-            color: #4f46e5; margin-bottom: 16px;
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5);
-        }
+        /* ドラムロール */
+        .drum-container { position: relative; height: 120px; overflow: hidden; background: #f8fafc; border-radius: 16px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); touch-action: pan-y; }
+        .drum-mask { position: absolute; inset: 0; pointer-events: none; z-index: 10; background: linear-gradient(to bottom, #ffffff 0%, transparent 40%, transparent 60%, #ffffff 100%); }
+        .drum-scroll { height: 100%; overflow-y: auto; scroll-snap-type: y mandatory; padding-top: 40px; padding-bottom: 40px; scrollbar-width: none; width: 100%; overflow-x: hidden; }
+        .drum-item { height: 40px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 500; color: #94a3b8; scroll-snap-align: center; transition: all 0.2s ease; cursor: pointer; width: 100%; }
+        .drum-item.active { color: #0f172a; font-size: 24px; font-weight: 700; transform: scale(1.1); }
+        .drum-highlight { position: absolute; top: 50%; left: 16px; right: 16px; height: 40px; transform: translateY(-50%); border-radius: 8px; background-color: rgba(15, 23, 42, 0.03); pointer-events: none; z-index: 0; }
 
-        /* ドロップエリア */
-        .upload-area {
-            background: rgba(255,255,255,0.6);
-            backdrop-filter: blur(10px);
-            border: 2px dashed #cbd5e1;
-            border-radius: 32px;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05);
-        }
-        .upload-area:hover, .upload-area.drag-over {
-            border-color: #4f46e5;
-            background: rgba(238, 242, 255, 0.8);
-            transform: scale(1.01);
-            box-shadow: 0 20px 40px -10px rgba(79, 70, 229, 0.1);
-        }
+        /* カスタムスライダー */
+        input[type=range] { -webkit-appearance: none; background: transparent; cursor: pointer; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #ffffff; border: 2px solid #0f172a; margin-top: -8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; border-radius: 2px; background: linear-gradient(to right, #cbd5e1 0%, #cbd5e1 100%); }
 
         /* ピッカーパネル (Glassmorphism) */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.85); 
-            backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.6); 
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.15);
+            /* スマホでの安全領域確保 */
             padding-bottom: max(24px, env(safe-area-inset-bottom));
         }
         
@@ -137,19 +95,6 @@
         .color-input-wrapper:hover { border-color: #cbd5e1; }
         input[type="color"] { position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; padding: 0; margin: 0; border: none; cursor: pointer; }
 
-        /* ドラムロール */
-        .drum-container { position: relative; height: 120px; overflow: hidden; background: #f1f5f9; border-radius: 16px; box-shadow: inset 0 2px 6px rgba(0,0,0,0.03); touch-action: pan-y; }
-        .drum-mask { position: absolute; inset: 0; pointer-events: none; z-index: 10; background: linear-gradient(to bottom, rgba(255,255,255,0.8) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.8) 100%); }
-        .drum-scroll { height: 100%; overflow-y: auto; scroll-snap-type: y mandatory; padding: 40px 0; scrollbar-width: none; width: 100%; overflow-x: hidden; }
-        .drum-item { height: 40px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 500; color: #94a3b8; scroll-snap-align: center; transition: all 0.2s ease; cursor: pointer; width: 100%; }
-        .drum-item.active { color: #4f46e5; font-size: 24px; font-weight: 700; transform: scale(1.1); }
-        
-        /* スライダー */
-        input[type=range] { -webkit-appearance: none; background: transparent; cursor: pointer; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #ffffff; border: 1px solid rgba(0,0,0,0.1); margin-top: -10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: transform 0.1s; }
-        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1); }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; border-radius: 2px; background: #cbd5e1; }
-
         /* トースト通知 */
         #toast {
             position: fixed; top: 32px; left: 50%; transform: translateX(-50%) translateY(-150%);
@@ -163,6 +108,25 @@
         
         .tool-separator { width: 1px; height: 24px; background-color: #cbd5e1; margin: 0 6px; opacity: 0.5; }
         @media (max-width: 768px) { .tool-separator { width: 24px; height: 1px; margin: 6px 0; } }
+
+        /* LP風デザイン */
+        .lp-bg { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); }
+        .mesh-gradient { position: absolute; width: 100%; height: 100%; top: 0; left: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+        .mesh-blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.6; }
+        .step-card {
+            background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 24px; padding: 28px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01); transition: all 0.3s ease;
+        }
+        .step-card:hover { transform: translateY(-4px); background: rgba(255, 255, 255, 0.9); box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08); }
+        .step-icon-wrapper {
+            width: 48px; height: 48px; border-radius: 16px; background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+            display: flex; align-items: center; justify-content: center; color: #4f46e5; margin-bottom: 16px;
+        }
+        .upload-area {
+            background: rgba(255,255,255,0.6); backdrop-filter: blur(10px); border: 2px dashed #cbd5e1;
+            border-radius: 32px; transition: all 0.3s ease; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05);
+        }
+        .upload-area:hover, .upload-area.drag-over { border-color: #4f46e5; background: rgba(238, 242, 255, 0.8); transform: scale(1.01); }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden bg-slate-50">
@@ -172,10 +136,12 @@
         <div class="max-w-[1600px] mx-auto px-6 h-full flex items-center justify-between">
             
             <div class="flex items-center gap-4">
+                <!-- 戻るボタン -->
                 <button id="closeBtn" onclick="closeEditor()" class="hidden relative z-50 p-2 -ml-2 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors mr-1 cursor-pointer" title="編集を終了">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
 
+                <!-- ロゴ -->
                 <div id="logoBtn" onclick="closeEditor()" class="flex items-center gap-3 select-none cursor-pointer group">
                     <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-2 rounded-xl shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-300">
                         <i data-lucide="pen-tool" class="w-5 h-5"></i>
@@ -191,8 +157,10 @@
                     <i data-lucide="image-plus" class="w-4 h-4"></i> 開く
                 </button>
                 <input type="file" id="fileInput" class="hidden" accept="image/*">
+                <!-- スマホ用 開くボタン -->
                 <button onclick="document.getElementById('fileInput').click()" class="md:hidden p-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors"><i data-lucide="image-plus" class="w-6 h-6"></i></button>
 
+                <!-- 編集時のみ表示するボタン群 -->
                 <div id="actionButtons" class="hidden flex items-center gap-3">
                     <div class="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
                     <button onclick="saveImage()" class="flex items-center gap-2 px-6 py-2.5 bg-brand-600 text-white text-sm font-bold rounded-full hover:bg-brand-700 shadow-lg shadow-brand-600/25 transition-all active:scale-95 transform hover:-translate-y-0.5">
@@ -205,6 +173,7 @@
 
     <div class="flex flex-1 flex-col-reverse md:flex-row overflow-hidden relative">
         
+        <!-- サイドバー (編集時のみ表示) -->
         <aside id="sidebar" class="hidden w-full md:w-[96px] bg-white/70 backdrop-blur-2xl border-t md:border-t-0 md:border-r border-white/20 md:flex-col z-20 shadow-xl shadow-slate-200/50 shrink-0 items-center justify-between md:justify-start py-3 md:py-8 px-4 md:px-0 gap-2 md:gap-6 overflow-x-auto no-scrollbar pb-[calc(env(safe-area-inset-bottom)+48px)] md:pb-6">
             <div class="flex md:flex-col gap-2 md:gap-4 items-center">
                 <button onclick="setMode('select')" id="btn-select" class="tool-btn active w-12 h-12 flex items-center justify-center" title="選択 (V)"><i data-lucide="mouse-pointer-2" class="w-6 h-6"></i></button>
@@ -231,10 +200,18 @@
                     <div class="mesh-blob bg-purple-400 w-96 h-96 bottom-0 right-0 animate-blob" style="animation-delay: -5s; animation-direction: reverse;"></div>
                     <div class="mesh-blob bg-pink-300 w-64 h-64 bottom-[20%] left-[20%] animate-blob" style="animation-delay: -2s;"></div>
                 </div>
+                
+                <!-- ヒーローエリア: justify-centerを削除し、ptで上部の余白を確保して見切れを防止 -->
                 <div class="max-w-5xl w-full text-center space-y-16 py-10 px-6 relative z-10 pt-24 md:pt-32 pb-20">
                     <div class="space-y-8 animate-fade-in-up">
-                        <h2 class="text-4xl md:text-7xl font-black text-slate-900 leading-tight tracking-tight drop-shadow-sm">画像の注釈を、<br class="md:hidden"><span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600">もっと美しく。</span></h2>
-                        <p class="text-slate-600 font-medium text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">インストール不要、ブラウザ完結のセキュアなエディタ。<br class="hidden md:block">美しい矢印や枠線、モザイクを瞬時に追加して共有。</p>
+                        <!-- 改行防止とクランプフォントサイズで1行化 -->
+                        <h2 class="font-black text-slate-900 leading-tight tracking-tight drop-shadow-sm whitespace-nowrap overflow-hidden text-ellipsis" style="font-size: clamp(28px, 6vw, 72px);">
+                            画像の注釈を<span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600">美しく</span>
+                        </h2>
+                        <p class="text-slate-600 font-medium text-lg md:text-xl max-w-2xl mx-auto leading-relaxed whitespace-normal">
+                            インストール不要、ブラウザ完結のセキュアなエディタ。<br class="hidden md:block">
+                            美しい矢印や枠線、モザイクを瞬時に追加して共有。
+                        </p>
                     </div>
                     <div class="grid md:grid-cols-3 gap-8 text-left max-w-4xl mx-auto">
                         <div class="step-card animate-fade-in-up" style="animation-delay: 0.1s"><div class="step-icon-wrapper"><i data-lucide="upload" class="w-6 h-6"></i></div><h3 class="font-bold text-xl mb-3 text-slate-800">1. Upload</h3><p class="text-sm text-slate-500 leading-relaxed font-medium">画像をドラッグ＆ドロップ。高画質のままブラウザで読み込みます。</p></div>
@@ -307,7 +284,6 @@
         </main>
     </div>
 
-    <!-- トースト通知 -->
     <div id="toast">
         <div id="toast-icon-bg" class="bg-emerald-100 text-emerald-600 p-1 rounded-full"><i data-lucide="check" class="w-4 h-4 stroke-[3]"></i></div>
         <span id="toastMsg" class="text-sm font-bold text-white">保存しました</span>
@@ -320,7 +296,7 @@
         
         let STATE = { color: '#ef4444', width: 4, fontSize: 32, mosaicSize: 8, rounded: true, maskColor: '#1e293b', mode: 'select', img: null, zoom: 1.0, scaleFactor: 1.0 };
         
-        // ドラムロール生成
+        // ドラムロール
         const drumScroller = document.getElementById('drum-scroller');
         const SIZE_OPTIONS = [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 160];
         SIZE_OPTIONS.forEach(w => {
@@ -510,25 +486,23 @@
             r.onload = f => { const i = new Image(); i.src = f.target.result; i.onload = () => initEditor(i); };
             r.readAsDataURL(blob);
         }
-        
-        // 状態切り替え関数
+
+        // 状態切替
         function showEmptyState() {
             document.getElementById('emptyState').classList.remove('hidden');
-            document.getElementById('dropZone').classList.add('hidden'); document.getElementById('dropZone').classList.remove('flex');
-            document.getElementById('zoomControls').classList.add('hidden'); document.getElementById('zoomControls').classList.remove('flex');
-            document.getElementById('closeBtn').classList.add('hidden');
-            document.getElementById('actionButtons').classList.add('hidden');
-            document.getElementById('sidebar').classList.add('hidden'); document.getElementById('sidebar').classList.remove('flex');
+            ['dropZone', 'zoomControls', 'closeBtn', 'actionButtons', 'sidebar'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+            });
             closeAllModals();
         }
 
         function showEditorState() {
             document.getElementById('emptyState').classList.add('hidden');
-            document.getElementById('dropZone').classList.remove('hidden'); document.getElementById('dropZone').classList.add('flex');
-            document.getElementById('zoomControls').classList.remove('hidden'); document.getElementById('zoomControls').classList.add('flex');
-            document.getElementById('closeBtn').classList.remove('hidden');
-            document.getElementById('actionButtons').classList.remove('hidden'); document.getElementById('actionButtons').classList.add('flex');
-            document.getElementById('sidebar').classList.remove('hidden'); document.getElementById('sidebar').classList.add('flex');
+            ['dropZone', 'zoomControls', 'closeBtn', 'actionButtons', 'sidebar'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) { el.classList.remove('hidden'); el.classList.add('flex'); }
+            });
         }
 
         function hardResetCanvas() {
@@ -559,7 +533,6 @@
         function resetEditor() {
             hardResetCanvas();
             showEmptyState();
-            // showToast('最初の画面に戻りました'); // 必要なら有効化
         }
 
         function closeEditor() {
@@ -597,7 +570,6 @@
             const z = STATE.zoom; setZoom(1); 
             canvas.discardActiveObject(); canvas.renderAll();
             
-            // 描画更新待ち
             await new Promise(r => setTimeout(r, 50));
 
             try {
@@ -608,18 +580,27 @@
                 const file = new File([blob], fileName, { type: 'image/png' });
 
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: 'SnapMark',
-                    });
+                    await navigator.share({ files: [file], title: 'SnapMark' });
                 } else {
                     const url = URL.createObjectURL(blob);
                     const l = document.createElement('a'); l.download = fileName; l.href = url;
                     document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(url);
-                    showToast('保存しました');
+                    showToast('画像を保存しました');
                 }
             } catch(e) {
-                if (e.name !== 'AbortError') { console.error(e); showToast('保存に失敗しました', true); }
+                if (e.name !== 'AbortError') {
+                    // Share失敗時のフォールバック
+                    try {
+                        const url = URL.createObjectURL(new Blob([await (await fetch(canvas.toDataURL('image/png'))).blob()]));
+                        const l = document.createElement('a'); l.download = `snapmark-${Date.now()}.png`; l.href = url;
+                        document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(url);
+                        showToast('画像をダウンロードしました');
+                    } catch(_) {
+                        showToast('保存に失敗しました', true);
+                    }
+                } else {
+                    showToast('共有をキャンセルしました');
+                }
             } finally {
                 setZoom(z);
             }
@@ -632,6 +613,7 @@
             const t = document.getElementById('toast');
             const iconBg = document.getElementById('toast-icon-bg');
             document.getElementById('toastMsg').textContent = msg;
+            
             const iconName = isError ? 'alert-circle' : 'check';
             const iconClass = isError ? "w-4 h-4 stroke-[3] text-rose-500" : "w-4 h-4 stroke-[3] text-emerald-600";
             iconBg.innerHTML = `<i data-lucide="${iconName}" class="${iconClass}"></i>`;
