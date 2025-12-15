@@ -20,31 +20,13 @@
                     },
                     boxShadow: { 
                         'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
-                        'float': '0 10px 40px -10px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.05)',
-                        'glow': '0 0 20px rgba(99, 102, 241, 0.2)'
-                    },
-                    animation: {
-                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'blob': 'blob 10s infinite alternate'
-                    },
-                    keyframes: {
-                        fadeInUp: {
-                            '0%': { opacity: '0', transform: 'translateY(20px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' }
-                        },
-                        blob: {
-                            '0%': { transform: 'translate(0, 0) scale(1)' },
-                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-                            '100%': { transform: 'translate(0, 0) scale(1)' }
-                        }
+                        'float': '0 10px 40px -10px rgba(0,0,0,0.1)'
                     }
                 }
             }
         }
     </script>
     <style>
-        /* 100dvhでモバイルブラウザのアドレスバー変動に対応 */
         body { font-family: 'Inter', 'Noto Sans JP', sans-serif; touch-action: none; background-color: #f8fafc; color: #0f172a; height: 100dvh; overflow: hidden; }
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -73,11 +55,10 @@
         input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; border-radius: 2px; background: linear-gradient(to right, #cbd5e1 0%, #cbd5e1 100%); }
 
-        /* ピッカーパネル (Glassmorphism) */
+        /* ピッカーパネル */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.15);
-            /* スマホでの安全領域確保 */
             padding-bottom: max(24px, env(safe-area-inset-bottom));
         }
         
@@ -88,9 +69,9 @@
         }
 
         /* カラーピッカー */
-        .color-dot { width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .color-dot { width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.1s; }
         .color-dot:hover { transform: scale(1.15); }
-        .color-dot.active { box-shadow: 0 0 0 2px white, 0 0 0 4px #4f46e5; z-index: 1; }
+        .color-dot.active { box-shadow: 0 0 0 2px white, 0 0 0 4px #0f172a; z-index: 1; }
         .color-input-wrapper { position: relative; width: 100%; height: 40px; border-radius: 12px; overflow: hidden; cursor: pointer; border: 1px solid #e2e8f0; background: white; transition: border-color 0.2s; }
         .color-input-wrapper:hover { border-color: #cbd5e1; }
         input[type="color"] { position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; padding: 0; margin: 0; border: none; cursor: pointer; }
@@ -98,8 +79,8 @@
         /* トースト通知 */
         #toast {
             position: fixed; top: 32px; left: 50%; transform: translateX(-50%) translateY(-150%);
-            opacity: 0; visibility: hidden; transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-            z-index: 100; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.15);
+            opacity: 0; visibility: hidden; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 100; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.2);
             background-color: #1f2937; color: white;
             padding: 12px 28px; border-radius: 99px;
             display: flex; align-items: center; gap: 12px;
@@ -161,10 +142,13 @@
                 <button onclick="document.getElementById('fileInput').click()" class="md:hidden p-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors"><i data-lucide="image-plus" class="w-6 h-6"></i></button>
 
                 <!-- 編集時のみ表示するボタン群 -->
-                <div id="actionButtons" class="hidden flex items-center gap-3">
+                <div id="actionButtons" class="hidden flex items-center gap-2">
                     <div class="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
-                    <button onclick="saveImage()" class="flex items-center gap-2 px-6 py-2.5 bg-brand-600 text-white text-sm font-bold rounded-full hover:bg-brand-700 shadow-lg shadow-brand-600/25 transition-all active:scale-95 transform hover:-translate-y-0.5">
-                        <i data-lucide="download" class="w-4 h-4"></i> <span>保存</span>
+                    <button onclick="saveImage(false)" class="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-xs md:text-sm font-bold rounded-full hover:bg-slate-800 shadow-lg shadow-slate-900/20 transition-all active:scale-95 transform hover:-translate-y-0.5" title="ダウンロード">
+                        <i data-lucide="download" class="w-4 h-4"></i> <span class="hidden md:inline">保存</span>
+                    </button>
+                    <button onclick="saveImage(true)" class="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-700 border border-slate-200 text-xs md:text-sm font-bold rounded-full hover:bg-slate-50 transition-all active:scale-95 transform hover:-translate-y-0.5" title="共有">
+                        <i data-lucide="share" class="w-4 h-4"></i> <span class="hidden md:inline">共有</span>
                     </button>
                 </div>
             </div>
@@ -173,38 +157,67 @@
 
     <div class="flex flex-1 flex-col-reverse md:flex-row overflow-hidden relative">
         
-        <!-- サイドバー (編集時のみ表示) -->
+        <!-- サイドバー -->
         <aside id="sidebar" class="hidden w-full md:w-[96px] bg-white/70 backdrop-blur-2xl border-t md:border-t-0 md:border-r border-white/20 md:flex-col z-20 shadow-xl shadow-slate-200/50 shrink-0 items-center justify-between md:justify-start py-3 md:py-8 px-4 md:px-0 gap-2 md:gap-6 overflow-x-auto no-scrollbar pb-[calc(env(safe-area-inset-bottom)+48px)] md:pb-6">
+            
             <div class="flex md:flex-col gap-2 md:gap-4 items-center">
-                <button onclick="setMode('select')" id="btn-select" class="tool-btn active w-12 h-12 flex items-center justify-center" title="選択 (V)"><i data-lucide="mouse-pointer-2" class="w-6 h-6"></i></button>
-                <button onclick="setMode('rect')" id="btn-rect" class="tool-btn w-12 h-12 flex items-center justify-center text-slate-500" title="枠線 (R)"><i data-lucide="square" class="w-6 h-6"></i></button>
-                <button onclick="setMode('arrow')" id="btn-arrow" class="tool-btn w-12 h-12 flex items-center justify-center text-slate-500" title="矢印 (A)"><i data-lucide="arrow-up-right" class="w-6 h-6"></i></button>
-                <button onclick="setMode('text')" id="btn-text" class="tool-btn w-12 h-12 flex items-center justify-center text-slate-500" title="文字 (T)"><i data-lucide="type" class="w-6 h-6"></i></button>
-                <button onclick="toggleSizePicker()" id="btn-size" class="tool-btn w-12 h-12 flex flex-col items-center justify-center gap-0.5 text-slate-500" title="サイズ設定"><i data-lucide="sliders-horizontal" class="w-5 h-5"></i></button>
-                <button onclick="toggleColorPicker()" id="btn-color" class="tool-btn w-12 h-12 flex items-center justify-center relative hover:bg-white" title="色設定"><div id="current-color-indicator" class="w-6 h-6 rounded-full border border-black/5 shadow-sm" style="background-color: #ef4444;"></div></button>
+                <button onclick="setMode('select')" id="btn-select" class="tool-btn active w-12 h-12 flex items-center justify-center" title="選択 (V)">
+                    <i data-lucide="mouse-pointer-2" class="w-6 h-6"></i>
+                </button>
+                
+                <button onclick="setMode('rect')" id="btn-rect" class="tool-btn w-12 h-12 flex items-center justify-center text-slate-500" title="枠線 (R)">
+                    <i data-lucide="square" class="w-6 h-6"></i>
+                </button>
+                <button onclick="setMode('arrow')" id="btn-arrow" class="tool-btn w-12 h-12 flex items-center justify-center text-slate-500" title="矢印 (A)">
+                    <i data-lucide="arrow-up-right" class="w-6 h-6"></i>
+                </button>
+                <button onclick="setMode('text')" id="btn-text" class="tool-btn w-12 h-12 flex items-center justify-center text-slate-500" title="文字 (T)">
+                    <i data-lucide="type" class="w-6 h-6"></i>
+                </button>
+                
+                <button onclick="toggleSizePicker()" id="btn-size" class="tool-btn w-12 h-12 flex flex-col items-center justify-center gap-0.5 text-slate-500" title="サイズ設定">
+                    <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
+                </button>
+
+                <button onclick="toggleColorPicker()" id="btn-color" class="tool-btn w-12 h-12 flex items-center justify-center relative hover:bg-white" title="色設定">
+                    <div id="current-color-indicator" class="w-6 h-6 rounded-full border border-black/5 shadow-sm" style="background-color: #ef4444;"></div>
+                </button>
             </div>
+
             <div class="tool-separator hidden md:block"></div>
+
             <div class="flex md:flex-col gap-2 md:gap-4 items-center">
-                <button onclick="setMode('mask-black')" id="btn-mask-black" class="tool-btn w-12 h-12 flex items-center justify-center text-slate-500" title="塗りつぶし"><div class="w-6 h-6 bg-slate-800 rounded-lg shadow-sm"></div></button>
-                <button onclick="setMode('mask-mosaic')" id="btn-mask-mosaic" class="tool-btn w-12 h-12 flex items-center justify-center text-slate-500" title="モザイク"><i data-lucide="grip" class="w-6 h-6"></i></button>
+                <button onclick="setMode('mask-black')" id="btn-mask-black" class="tool-btn w-12 h-12 flex items-center justify-center text-slate-500" title="塗りつぶし">
+                    <div class="w-6 h-6 bg-slate-800 rounded-lg shadow-sm"></div>
+                </button>
+                <button onclick="setMode('mask-mosaic')" id="btn-mask-mosaic" class="tool-btn w-12 h-12 flex items-center justify-center text-slate-500" title="モザイク">
+                    <i data-lucide="grip" class="w-6 h-6"></i>
+                </button>
+                
                 <div class="tool-separator"></div>
-                <button onclick="deleteObject()" class="w-12 h-12 flex items-center justify-center rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-600 transition-colors" title="削除 (Del)"><i data-lucide="trash-2" class="w-6 h-6"></i></button>
-                <button onclick="resetCanvas()" class="w-12 h-12 flex items-center justify-center rounded-2xl text-slate-400 hover:bg-white hover:text-slate-600 transition-colors" title="全消去"><i data-lucide="rotate-ccw" class="w-6 h-6"></i></button>
+
+                <button onclick="deleteObject()" class="w-12 h-12 flex items-center justify-center rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-600 transition-colors" title="削除 (Del)">
+                    <i data-lucide="trash-2" class="w-6 h-6"></i>
+                </button>
+                <button onclick="resetCanvas()" class="w-12 h-12 flex items-center justify-center rounded-2xl text-slate-400 hover:bg-white hover:text-slate-600 transition-colors" title="全消去">
+                    <i data-lucide="rotate-ccw" class="w-6 h-6"></i>
+                </button>
             </div>
         </aside>
 
+        <!-- メインエリア -->
         <main class="flex-1 relative flex flex-col overflow-hidden">
+            
+            <!-- LP風 初期画面 -->
             <div id="emptyState" class="absolute inset-0 z-20 flex flex-col items-center overflow-auto custom-scrollbar lp-bg">
                 <div class="mesh-gradient">
                     <div class="mesh-blob bg-blue-400 w-96 h-96 top-0 left-0 animate-blob"></div>
                     <div class="mesh-blob bg-purple-400 w-96 h-96 bottom-0 right-0 animate-blob" style="animation-delay: -5s; animation-direction: reverse;"></div>
                     <div class="mesh-blob bg-pink-300 w-64 h-64 bottom-[20%] left-[20%] animate-blob" style="animation-delay: -2s;"></div>
                 </div>
-                
-                <!-- ヒーローエリア: justify-centerを削除し、ptで上部の余白を確保して見切れを防止 -->
+
                 <div class="max-w-5xl w-full text-center space-y-16 py-10 px-6 relative z-10 pt-24 md:pt-32 pb-20">
                     <div class="space-y-8 animate-fade-in-up">
-                        <!-- 改行防止とクランプフォントサイズで1行化 -->
                         <h2 class="font-black text-slate-900 leading-tight tracking-tight drop-shadow-sm whitespace-nowrap overflow-hidden text-ellipsis" style="font-size: clamp(28px, 6vw, 72px);">
                             画像の注釈を<span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600">美しく</span>
                         </h2>
@@ -215,7 +228,7 @@
                     </div>
                     <div class="grid md:grid-cols-3 gap-8 text-left max-w-4xl mx-auto">
                         <div class="step-card animate-fade-in-up" style="animation-delay: 0.1s"><div class="step-icon-wrapper"><i data-lucide="upload" class="w-6 h-6"></i></div><h3 class="font-bold text-xl mb-3 text-slate-800">1. Upload</h3><p class="text-sm text-slate-500 leading-relaxed font-medium">画像をドラッグ＆ドロップ。高画質のままブラウザで読み込みます。</p></div>
-                        <div class="step-card animate-fade-in-up" style="animation-delay: 0.2s"><div class="step-icon-wrapper"><i data-lucide="edit-3" class="w-6 h-6"></i></div><h3 class="font-bold text-xl mb-3 text-slate-800">2. Edit</h3><p class="text-sm text-slate-500 leading-relaxed font-medium">矢印で強調したり、プライバシー情報をモザイクで隠したり。</p></div>
+                        <div class="step-card animate-fade-in-up" style="animation-delay: 0.2s"><div class="step-icon-wrapper"><i data-lucide="edit-3" class="w-6 h-6"></i></div><h3 class="font-bold text-xl mb-3 text-slate-800">2. Edit</h3><p class="text-sm text-slate-500 leading-relaxed font-medium">矢印や枠線を直感的に操作。プライバシー情報はモザイクで保護。</p></div>
                         <div class="step-card animate-fade-in-up" style="animation-delay: 0.3s"><div class="step-icon-wrapper"><i data-lucide="download-cloud" class="w-6 h-6"></i></div><h3 class="font-bold text-xl mb-3 text-slate-800">3. Export</h3><p class="text-sm text-slate-500 leading-relaxed font-medium">画質を劣化させずに保存。ワンクリックで完了します。</p></div>
                     </div>
                     <div class="upload-area w-full max-w-2xl mx-auto p-16 flex flex-col items-center justify-center group animate-fade-in-up cursor-pointer" style="animation-delay: 0.4s" onclick="document.getElementById('fileInput').click()">
@@ -227,6 +240,7 @@
                 </div>
             </div>
 
+            <!-- キャンバス -->
             <div id="dropZone" class="hidden flex-1 overflow-auto custom-scrollbar relative z-10 flex-col w-full h-full bg-[#f1f5f9]">
                 <div class="absolute inset-0 z-0 opacity-[0.4]" style="background-image: radial-gradient(#9ca3af 1.5px, transparent 1.5px); background-size: 24px 24px;"></div>
                 <div class="flex-grow flex items-center justify-center min-w-min min-h-min p-8 md:p-16 relative z-10">
@@ -234,6 +248,7 @@
                 </div>
             </div>
 
+            <!-- ズーム -->
             <div id="zoomControls" class="hidden absolute bottom-8 left-1/2 -translate-x-1/2 items-center gap-1 bg-white/80 backdrop-blur-md shadow-float p-1.5 rounded-full border border-white/60 z-30 transition-all pb-[env(safe-area-inset-bottom)]">
                 <button onclick="zoomOut()" class="w-10 h-10 rounded-full hover:bg-white flex items-center justify-center text-slate-600 transition-colors"><i data-lucide="minus" class="w-5 h-5"></i></button>
                 <span id="zoomLevel" class="text-sm font-bold text-slate-800 w-14 text-center select-none tabular-nums">100%</span>
@@ -242,6 +257,7 @@
                 <button onclick="fitToScreen()" class="px-5 py-2 rounded-full bg-slate-100 hover:bg-white text-xs font-bold text-slate-700 transition-colors uppercase tracking-wide">Fit</button>
             </div>
 
+            <!-- パネル類 -->
             <div id="sizePickerPanel" class="hidden absolute glass-panel z-40 w-full md:w-72 md:rounded-3xl p-6 left-0 bottom-0 md:left-[112px] md:bottom-auto md:top-24 origin-bottom-left">
                 <div class="w-12 h-1.5 bg-slate-300/50 rounded-full mx-auto mb-6 md:hidden"></div>
                 <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" id="size-label">Line Width</div>
@@ -284,6 +300,7 @@
         </main>
     </div>
 
+    <!-- トースト通知 -->
     <div id="toast">
         <div id="toast-icon-bg" class="bg-emerald-100 text-emerald-600 p-1 rounded-full"><i data-lucide="check" class="w-4 h-4 stroke-[3]"></i></div>
         <span id="toastMsg" class="text-sm font-bold text-white">保存しました</span>
@@ -291,12 +308,49 @@
 
     <script>
         lucide.createIcons();
+        
+        fabric.LineArrow = fabric.util.createClass(fabric.Line, {
+            type: 'lineArrow',
+            initialize: function(points, options) {
+                options = options || {};
+                this.callSuper('initialize', points, options);
+            },
+            _render: function(ctx) {
+                this.callSuper('_render', ctx);
+                if (this.width === 0 && this.height === 0) return;
+                ctx.save();
+                const xDiff = this.x2 - this.x1;
+                const yDiff = this.y2 - this.y1;
+                const angle = Math.atan2(yDiff, xDiff);
+                ctx.translate(xDiff/2, yDiff/2);
+                ctx.rotate(angle);
+                const headLen = Math.max(15, this.strokeWidth * 3.5);
+                const headWidth = Math.max(10, this.strokeWidth * 2.5);
+                ctx.beginPath();
+                ctx.moveTo(0, 0); 
+                ctx.lineTo(-headLen, headWidth / 2);
+                ctx.lineTo(-headLen * 0.8, 0); 
+                ctx.lineTo(-headLen, -headWidth / 2);
+                ctx.closePath();
+                ctx.fillStyle = this.stroke;
+                ctx.fill();
+                ctx.restore();
+            }
+        });
+
         const canvas = new fabric.Canvas('c', { selection: true, preserveObjectStacking: true, backgroundColor: '#ffffff', uniformScaling: false });
         fabric.Object.prototype.set({ transparentCorners: false, cornerColor: '#ffffff', cornerStrokeColor: '#2563eb', borderColor: '#2563eb', cornerSize: 12, padding: 8, cornerStyle: 'circle', borderDashArray: [4, 4], borderOpacityWhenMoving: 0.5, uniformScaling: false });
         
-        let STATE = { color: '#ef4444', width: 4, fontSize: 32, mosaicSize: 8, rounded: true, maskColor: '#1e293b', mode: 'select', img: null, zoom: 1.0, scaleFactor: 1.0 };
+        let STATE = { color: '#ef4444', width: 4, fontSize: 32, mosaicSize: 8, rounded: true, maskColor: '#1e293b', mode: 'select', img: null, zoom: 1.0, scaleFactor: 1.0, isDrawing: false, drawStart: null, activeObj: null };
         
-        // ドラムロール
+        document.addEventListener('DOMContentLoaded', () => {
+            const closer = () => { if(STATE.img) closeEditor(); };
+            const closeBtn = document.getElementById('closeBtn');
+            const logoBtn = document.getElementById('logoBtn');
+            if(closeBtn) closeBtn.onclick = closer;
+            if(logoBtn) logoBtn.onclick = closer;
+        });
+
         const drumScroller = document.getElementById('drum-scroller');
         const SIZE_OPTIONS = [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 160];
         SIZE_OPTIONS.forEach(w => {
@@ -352,7 +406,9 @@
         function setMode(m) {
             STATE.mode = m; document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             const btn = document.getElementById(`btn-${m}`); if(btn) btn.classList.add('active');
-            canvas.isDrawingMode = false; canvas.selection = (m === 'select'); canvas.defaultCursor = m === 'select' ? 'default' : 'crosshair';
+            canvas.isDrawingMode = false;
+            canvas.selection = (m === 'select'); 
+            canvas.defaultCursor = m === 'select' ? 'default' : 'crosshair';
             canvas.getObjects().forEach(o => { o.selectable = (m === 'select'); o.evented = (m === 'select'); });
             canvas.requestRenderAll();
         }
@@ -377,7 +433,7 @@
             document.getElementById('sheet-slider').value = v;
             if(isText) { STATE.fontSize = v; if(obj && obj.type==='i-text') { obj.set({fontSize: v * STATE.scaleFactor}); canvas.requestRenderAll(); } }
             else if(isMosaic) { STATE.mosaicSize = v; if(obj && obj.isMosaic) updateMosaic(obj); }
-            else { STATE.width = v; if(obj && obj.stroke) { obj.set({strokeWidth: v * STATE.scaleFactor}); canvas.requestRenderAll(); } }
+            else { STATE.width = v; if(obj && (obj.stroke || obj.type==='lineArrow')) { obj.set({strokeWidth: v * STATE.scaleFactor}); canvas.requestRenderAll(); } }
         }
         function setRounded(v) {
             STATE.rounded = v; const obj = canvas.getActiveObject();
@@ -398,29 +454,52 @@
         canvas.on('mouse:down', opt => {
             if(STATE.mode === 'select') return;
             const p = canvas.getPointer(opt.e);
-            const sf = STATE.scaleFactor;
-            const sw = STATE.width * sf;
-            const sr = STATE.rounded ? 5 * sf : 0;
-            const size = 100 * sf;
             
-            if(STATE.mode === 'rect') addToCanvas(new fabric.Rect({ left: p.x, top: p.y, width: size, height: size*0.6, fill: 'transparent', stroke: STATE.color, strokeWidth: sw, rx: sr, ry: sr, strokeUniform: true }));
-            else if(STATE.mode === 'arrow') { const hs = 10*sf + sw*0.5; addToCanvas(new fabric.Path(`M 0 0 L ${size} 0 M ${size-hs} -${hs} L ${size} 0 L ${size-hs} ${hs}`, { left: p.x, top: p.y, fill: 'transparent', stroke: STATE.color, strokeWidth: sw, strokeLineCap: 'round', strokeLineJoin: 'round' })); }
-            else if(STATE.mode === 'text') { 
-                const t = new fabric.IText('', { 
-                    left: p.x, top: p.y, fontFamily: 'Noto Sans JP', fontSize: STATE.fontSize*sf, fill: STATE.color, fontWeight: 'bold' 
-                }); 
-                t.set({uniformScaling: true}); addToCanvas(t); t.bringToFront(); t.enterEditing(); if(t.hiddenTextarea) t.hiddenTextarea.focus();
+            if(STATE.mode === 'arrow') {
+                STATE.isDrawing = true; STATE.drawStart = p;
+                const points = [p.x, p.y, p.x, p.y];
+                const arrow = new fabric.LineArrow(points, { strokeWidth: STATE.width * STATE.scaleFactor, fill: 'transparent', stroke: STATE.color, originX: 'center', originY: 'center', selectable: false, evented: false });
+                STATE.activeObj = arrow; canvas.add(arrow);
+            } else {
+                const sf = STATE.scaleFactor; const sw = STATE.width * sf; const sr = STATE.rounded ? 5 * sf : 0; const size = 100 * sf;
+                if(STATE.mode === 'rect') addToCanvas(new fabric.Rect({ left: p.x, top: p.y, width: size, height: size*0.6, fill: 'transparent', stroke: STATE.color, strokeWidth: sw, rx: sr, ry: sr, strokeUniform: true }));
+                else if(STATE.mode === 'text') { 
+                    const t = new fabric.IText('', { left: p.x, top: p.y, fontFamily: 'Noto Sans JP', fontSize: STATE.fontSize*sf, fill: STATE.color, fontWeight: 'bold' }); 
+                    t.set({uniformScaling: true}); addToCanvas(t); t.bringToFront(); t.enterEditing(); if(t.hiddenTextarea) t.hiddenTextarea.focus();
+                }
+                else if(STATE.mode === 'mask-black') addToCanvas(new fabric.Rect({ left: p.x, top: p.y, width: size, height: size*0.4, fill: STATE.maskColor, rx: 0, ry: 0 }));
+                else if(STATE.mode === 'mask-mosaic') addMosaic(p.x, p.y);
+                setMode('select');
             }
-            else if(STATE.mode === 'mask-black') addToCanvas(new fabric.Rect({ left: p.x, top: p.y, width: size, height: size*0.4, fill: STATE.maskColor, rx: 0, ry: 0 }));
-            else if(STATE.mode === 'mask-mosaic') addMosaic(p.x, p.y);
-            setMode('select');
         });
+
+        canvas.on('mouse:move', opt => {
+            if (!STATE.isDrawing || !STATE.activeObj) return;
+            const p = canvas.getPointer(opt.e);
+            if(STATE.mode === 'arrow') { STATE.activeObj.set({ x2: p.x, y2: p.y }); canvas.requestRenderAll(); }
+        });
+
+        canvas.on('mouse:up', opt => {
+            if (STATE.isDrawing) {
+                STATE.isDrawing = false;
+                if(STATE.activeObj) {
+                    STATE.activeObj.setCoords();
+                    setArrowControls(STATE.activeObj);
+                    STATE.activeObj = null;
+                }
+                setMode('select');
+            }
+        });
+
+        function setArrowControls(obj) {
+            obj.hasBorders = false; obj.hasControls = true;
+             obj.setControlsVisibility({ mt:false, mb:false, ml:true, mr:true, bl:false, br:false, tl:false, tr:false, mtr:true });
+        }
 
         function addToCanvas(obj) {
             if(obj.type!=='i-text') obj.setControlsVisibility({mt:true, mb:true, ml:true, mr:true, bl:true, br:true, tl:true, tr:true, mtr:true});
             else obj.setControlsVisibility({mt:false, mb:false, ml:false, mr:false, bl:true, br:true, tl:true, tr:true, mtr:true});
-            canvas.add(obj); 
-            canvas.setActiveObject(obj);
+            canvas.add(obj); canvas.setActiveObject(obj);
             if(obj.type !== 'i-text') { canvas.getObjects().forEach(o => { if(o.type === 'i-text') o.bringToFront(); }); }
         }
 
@@ -486,59 +565,31 @@
             r.onload = f => { const i = new Image(); i.src = f.target.result; i.onload = () => initEditor(i); };
             r.readAsDataURL(blob);
         }
-
-        // 状態切替
         function showEmptyState() {
             document.getElementById('emptyState').classList.remove('hidden');
-            ['dropZone', 'zoomControls', 'closeBtn', 'actionButtons', 'sidebar'].forEach(id => {
-                const el = document.getElementById(id);
-                if(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
-            });
+            document.getElementById('dropZone').classList.add('hidden'); document.getElementById('dropZone').classList.remove('flex');
+            document.getElementById('zoomControls').classList.add('hidden'); document.getElementById('zoomControls').classList.remove('flex');
+            document.getElementById('closeBtn').classList.add('hidden');
+            document.getElementById('actionButtons').classList.add('hidden');
+            document.getElementById('sidebar').classList.add('hidden'); document.getElementById('sidebar').classList.remove('flex');
             closeAllModals();
         }
-
         function showEditorState() {
             document.getElementById('emptyState').classList.add('hidden');
-            ['dropZone', 'zoomControls', 'closeBtn', 'actionButtons', 'sidebar'].forEach(id => {
-                const el = document.getElementById(id);
-                if(el) { el.classList.remove('hidden'); el.classList.add('flex'); }
-            });
+            document.getElementById('dropZone').classList.remove('hidden'); document.getElementById('dropZone').classList.add('flex');
+            document.getElementById('zoomControls').classList.remove('hidden'); document.getElementById('zoomControls').classList.add('flex');
+            document.getElementById('closeBtn').classList.remove('hidden');
+            document.getElementById('actionButtons').classList.remove('hidden'); document.getElementById('actionButtons').classList.add('flex');
+            document.getElementById('sidebar').classList.remove('hidden'); document.getElementById('sidebar').classList.add('flex');
         }
-
         function hardResetCanvas() {
-            try {
-                canvas.discardActiveObject();
-                const objs = canvas.getObjects();
-                if (objs && objs.length) { [...objs].forEach(o => canvas.remove(o)); }
-                canvas.clear(); 
-            } catch (e) { console.error(e); }
-
+            try { canvas.discardActiveObject(); const objs = canvas.getObjects(); if (objs && objs.length) { [...objs].forEach(o => canvas.remove(o)); } canvas.clear(); } catch (e) {}
             STATE = { color: '#ef4444', width: 4, fontSize: 32, mosaicSize: 8, rounded: true, maskColor: '#1e293b', mode: 'select', img: null, zoom: 1.0, scaleFactor: 1.0 };
-            
-            canvas.setZoom(1);
-            canvas.setDimensions({ width: 800, height: 600 });
-            canvas.setBackgroundImage(null, canvas.renderAll.bind(canvas));
-            
-            document.getElementById('zoomLevel').textContent = '100%';
-            document.getElementById('sheet-slider').value = '4';
-            
-            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            const selBtn = document.getElementById('btn-select');
-            if(selBtn) selBtn.classList.add('active');
-            
-            const fi = document.getElementById('fileInput');
-            if (fi) fi.value = '';
+            canvas.setZoom(1); canvas.setDimensions({ width: 800, height: 600 }); canvas.setBackgroundImage(null, canvas.renderAll.bind(canvas));
+            const fi = document.getElementById('fileInput'); if (fi) fi.value = '';
         }
-
-        function resetEditor() {
-            hardResetCanvas();
-            showEmptyState();
-        }
-
-        function closeEditor() {
-            resetEditor();
-        }
-
+        function resetEditor() { hardResetCanvas(); showEmptyState(); showToast('最初の画面に戻りました'); }
+        function closeEditor() { resetEditor(); }
         function initEditor(imgTag) {
             showEditorState();
             STATE.img = new fabric.Image(imgTag, { selectable: false, evented: false });
@@ -565,7 +616,7 @@
         function zoomIn() { let z = STATE.zoom * 1.2; if(z>5)z=5; setZoom(z); }
         function zoomOut() { let z = STATE.zoom / 1.2; if(z<0.1)z=0.1; setZoom(z); }
 
-        async function saveImage() {
+        async function saveImage(isShare) {
             if(!STATE.img) return;
             const z = STATE.zoom; setZoom(1); 
             canvas.discardActiveObject(); canvas.renderAll();
@@ -574,33 +625,54 @@
 
             try {
                 const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, multiplier: 1 });
-                const res = await fetch(dataUrl);
-                const blob = await res.blob();
-                const fileName = `snapmark-${Date.now()}.png`;
-                const file = new File([blob], fileName, { type: 'image/png' });
+                
+                if (isShare) {
+                    const res = await fetch(dataUrl);
+                    const blob = await res.blob();
+                    const fileName = `snapmark-${Date.now()}.png`;
+                    const file = new File([blob], fileName, { type: 'image/png' });
 
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file], title: 'SnapMark' });
-                } else {
-                    const url = URL.createObjectURL(blob);
-                    const l = document.createElement('a'); l.download = fileName; l.href = url;
-                    document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(url);
-                    showToast('画像を保存しました');
-                }
-            } catch(e) {
-                if (e.name !== 'AbortError') {
-                    // Share失敗時のフォールバック
-                    try {
-                        const url = URL.createObjectURL(new Blob([await (await fetch(canvas.toDataURL('image/png'))).blob()]));
-                        const l = document.createElement('a'); l.download = `snapmark-${Date.now()}.png`; l.href = url;
-                        document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(url);
-                        showToast('画像をダウンロードしました');
-                    } catch(_) {
-                        showToast('保存に失敗しました', true);
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: 'SnapMark' });
+                    } else {
+                        showToast('この端末は共有機能に対応していません', true);
                     }
                 } else {
-                    showToast('共有をキャンセルしました');
+                    // PC保存: File System Access API
+                    let useFallback = true;
+                    if (window.showSaveFilePicker) {
+                        try {
+                            const blob = await (await fetch(dataUrl)).blob();
+                            const handle = await window.showSaveFilePicker({
+                                suggestedName: `snapmark-${Date.now()}.png`,
+                                types: [{ description: 'PNG Image', accept: {'image/png': ['.png']} }],
+                            });
+                            const writable = await handle.createWritable();
+                            await writable.write(blob);
+                            await writable.close();
+                            showToast('保存しました');
+                            useFallback = false;
+                        } catch (err) {
+                             if (err.name === 'AbortError') {
+                                 useFallback = false;
+                             } else {
+                                 console.warn('FS Access API error, using fallback', err);
+                             }
+                        }
+                    } 
+                    
+                    if (useFallback) {
+                        const link = document.createElement('a');
+                        link.download = `snapmark-${Date.now()}.png`;
+                        link.href = dataUrl;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        showToast('保存しました');
+                    }
                 }
+            } catch(e) {
+                console.error(e); showToast('失敗しました', true);
             } finally {
                 setZoom(z);
             }
@@ -613,19 +685,15 @@
             const t = document.getElementById('toast');
             const iconBg = document.getElementById('toast-icon-bg');
             document.getElementById('toastMsg').textContent = msg;
-            
             const iconName = isError ? 'alert-circle' : 'check';
             const iconClass = isError ? "w-4 h-4 stroke-[3] text-rose-500" : "w-4 h-4 stroke-[3] text-emerald-600";
             iconBg.innerHTML = `<i data-lucide="${iconName}" class="${iconClass}"></i>`;
             
             t.className = "fixed top-24 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur pl-4 pr-6 py-3 rounded-full shadow-float flex items-center gap-3 z-50 border transition-all duration-300";
-            
             if(isError) { iconBg.className = 'bg-rose-100 p-1 rounded-full'; t.classList.add('border-rose-200'); } 
             else { iconBg.className = 'bg-emerald-100 p-1 rounded-full'; t.classList.add('border-white/50'); }
             lucide.createIcons();
-
             t.classList.remove('toast-hidden'); t.classList.add('show');
-
             if(toastTimeout) clearTimeout(toastTimeout);
             toastTimeout = setTimeout(() => { t.classList.remove('show'); t.classList.add('toast-hidden'); }, 3000);
         }
