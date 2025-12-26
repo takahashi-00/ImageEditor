@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <!-- PDF.js の追加 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
     <script>
@@ -137,7 +139,8 @@
                 <button onclick="document.getElementById('fileInput').click()" class="hidden md:flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-slate-600 hover:bg-slate-100 transition-all hover:shadow-inner">
                     <i data-lucide="image-plus" class="w-4 h-4"></i> 開く
                 </button>
-                <input type="file" id="fileInput" class="hidden" accept="image/*">
+                <!-- PDFも許可するように accept を変更 -->
+                <input type="file" id="fileInput" class="hidden" accept="image/*,application/pdf">
                 <!-- スマホ用 開くボタン -->
                 <button onclick="document.getElementById('fileInput').click()" class="md:hidden p-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors"><i data-lucide="image-plus" class="w-6 h-6"></i></button>
 
@@ -233,9 +236,9 @@
                     </div>
                     <div class="upload-area w-full max-w-2xl mx-auto p-16 flex flex-col items-center justify-center group animate-fade-in-up cursor-pointer" style="animation-delay: 0.4s" onclick="document.getElementById('fileInput').click()">
                         <div class="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner"><i data-lucide="image-plus" class="w-10 h-10 text-indigo-600"></i></div>
-                        <h3 class="text-2xl font-bold text-slate-800 mb-2">画像ファイルをドロップ</h3>
+                        <h3 class="text-2xl font-bold text-slate-800 mb-2">画像・PDFをドロップ</h3>
                         <p class="text-slate-400 font-medium mb-8">またはクリックしてファイルを選択</p>
-                        <button class="inline-flex items-center gap-2 text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 px-8 py-4 rounded-full shadow-xl shadow-slate-900/20 transition-all active:scale-95">画像を選択する</button>
+                        <button class="inline-flex items-center gap-2 text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 px-8 py-4 rounded-full shadow-xl shadow-slate-900/20 transition-all active:scale-95">ファイルを選択する</button>
                     </div>
                 </div>
             </div>
@@ -309,6 +312,9 @@
     <script>
         lucide.createIcons();
         
+        // PDF.js Worker設定
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         fabric.LineArrow = fabric.util.createClass(fabric.Line, {
             type: 'lineArrow',
             initialize: function(points, options) {
@@ -552,19 +558,54 @@
         }
         document.addEventListener('paste', e => {
             const items = e.clipboardData.items;
-            for(let i=0; i<items.length; i++) if(items[i].type.indexOf('image')!==-1) loadBlob(items[i].getAsFile());
+            for(let i=0; i<items.length; i++) {
+                // PDFもクリップボードから読み込める場合は読み込む（ファイルとして扱われることが多い）
+                if(items[i].type.indexOf('image')!==-1 || items[i].type === 'application/pdf') {
+                    loadBlob(items[i].getAsFile());
+                }
+            }
         });
 
         function handleFile(e) {
             const f = e.target.files[0]; if(!f) return;
-            if(f.type.startsWith('image/')) loadBlob(f); else showToast('画像のみ対応しています', true);
+            if(f.type.startsWith('image/') || f.type === 'application/pdf') {
+                loadBlob(f); 
+            } else { 
+                showToast('画像またはPDFに対応しています', true); 
+            }
             e.target.value = '';
         }
-        function loadBlob(blob) {
-            const r = new FileReader();
-            r.onload = f => { const i = new Image(); i.src = f.target.result; i.onload = () => initEditor(i); };
-            r.readAsDataURL(blob);
+        
+        async function loadBlob(blob) {
+            if(blob.type === 'application/pdf') {
+                try {
+                    const arrayBuffer = await blob.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                    // 1ページ目のみ取得
+                    const page = await pdf.getPage(1);
+                    const viewport = page.getViewport({scale: 2.0}); // 高解像度でレンダリング
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    await page.render({canvasContext: context, viewport: viewport}).promise;
+                    
+                    const i = new Image();
+                    i.src = canvas.toDataURL('image/png');
+                    i.onload = () => initEditor(i);
+                } catch(e) {
+                    console.error(e);
+                    showToast('PDFの読み込みに失敗しました', true);
+                }
+            } else {
+                const r = new FileReader();
+                r.onload = f => { const i = new Image(); i.src = f.target.result; i.onload = () => initEditor(i); };
+                r.readAsDataURL(blob);
+            }
         }
+
         function showEmptyState() {
             document.getElementById('emptyState').classList.remove('hidden');
             document.getElementById('dropZone').classList.add('hidden'); document.getElementById('dropZone').classList.remove('flex');
